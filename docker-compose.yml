@@ -1,0 +1,44 @@
+services:
+  ground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ground
+    ports:
+      - "8012:8000"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=ground_db;Port=5432;Database=ground;Username=ground;Password=ground
+      - Kafka__BootstrapServers=${KAFKA_BOOTSTRAP_SERVERS:-}
+    depends_on:
+      ground_db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - airport
+
+  ground_db:
+    image: postgres:16
+    container_name: ground_db
+    environment:
+      POSTGRES_DB: ground
+      POSTGRES_USER: ground
+      POSTGRES_PASSWORD: ground
+    ports:
+      - "5442:5432"
+    volumes:
+      - ground_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ground -d ground"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - airport
+
+volumes:
+  ground_db_data:
+
+networks:
+  airport:
+    name: airport_network
+    driver: bridge
