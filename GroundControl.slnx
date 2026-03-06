@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GroundControl.Api/GroundControl.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GroundControl.Tests/GroundControl.Tests.csproj" />
+  </Folder>
+</Solution>
