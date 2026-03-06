@@ -1,0 +1,39 @@
+services:
+  ground_db:
+    image: postgres:16
+    container_name: ground_db
+    environment:
+      POSTGRES_DB: ground
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ground_db_data:/var/lib/postgresql/data
+      - ./Docs/ground_control_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ground
+    ports:
+      - "8012:8000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=ground_db;Port=5432;Database=ground;Username=postgres;Password=postgres
+      - Kafka__Enabled=false
+      - Kafka__BootstrapServers=kafka:9092
+      - Kafka__GroupId=ground-service
+    depends_on:
+      ground_db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ground_db_data:

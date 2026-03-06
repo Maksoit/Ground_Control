@@ -1,0 +1,137 @@
+### Переменные
+@baseUrl = http://localhost:8012
+@routeId = 550e8400-e29b-41d4-a716-446655440000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Version
+GET {{baseUrl}}/version
+
+### ========================================
+### GRAPH ENDPOINTS
+### ========================================
+
+### Получить все узлы графа
+GET {{baseUrl}}/v1/graph/nodes
+
+### Получить все рёбра графа
+GET {{baseUrl}}/v1/graph/edges
+
+### ========================================
+### ROUTES ENDPOINTS
+### ========================================
+
+### Получить все маршруты
+GET {{baseUrl}}/v1/routes
+
+### Получить маршруты по vehicleId
+GET {{baseUrl}}/v1/routes?vehicleId=PL-1
+
+### Получить маршруты по vehicleType
+GET {{baseUrl}}/v1/routes?vehicleType=plane
+
+### Зарезервировать маршрут для самолёта
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "{{routeId}}",
+  "vehicleId": "PL-1",
+  "vehicleType": "plane",
+  "fromNode": "P-1",
+  "toNode": "RW-1",
+  "ttlMinutes": 10
+}
+
+### Зарезервировать маршрут для автобуса
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "660e8400-e29b-41d4-a716-446655440001",
+  "vehicleId": "BUS-1",
+  "vehicleType": "bus",
+  "fromNode": "T-1",
+  "toNode": "P-2",
+  "ttlMinutes": 5
+}
+
+### Повторный запрос (проверка идемпотентности)
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "{{routeId}}",
+  "vehicleId": "PL-1",
+  "vehicleType": "plane",
+  "fromNode": "P-1",
+  "toNode": "RW-1",
+  "ttlMinutes": 10
+}
+
+### Освободить маршрут
+POST {{baseUrl}}/v1/routes/{{routeId}}/release
+
+### ========================================
+### OCCUPANCY ENDPOINTS
+### ========================================
+
+### Получить текущую занятость рёбер
+GET {{baseUrl}}/v1/occupancy
+
+### ========================================
+### ТЕСТОВЫЕ СЦЕНАРИИ
+### ========================================
+
+### Сценарий 1: Конфликт маршрутов
+# 1. Зарезервировать первый маршрут
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "770e8400-e29b-41d4-a716-446655440002",
+  "vehicleId": "PL-2",
+  "vehicleType": "plane",
+  "fromNode": "P-1",
+  "toNode": "RW-1",
+  "ttlMinutes": 10
+}
+
+###
+# 2. Попытаться зарезервировать пересекающийся маршрут (должен вернуть 409)
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "880e8400-e29b-41d4-a716-446655440003",
+  "vehicleId": "PL-3",
+  "vehicleType": "plane",
+  "fromNode": "P-1",
+  "toNode": "RW-1",
+  "ttlMinutes": 10
+}
+
+###
+# 3. Освободить первый маршрут
+POST {{baseUrl}}/v1/routes/770e8400-e29b-41d4-a716-446655440002/release
+
+###
+# 4. Теперь второй маршрут должен зарезервироваться успешно
+POST {{baseUrl}}/v1/routes/reserve
+Content-Type: application/json
+
+{
+  "reservationId": "880e8400-e29b-41d4-a716-446655440003",
+  "vehicleId": "PL-3",
+  "vehicleType": "plane",
+  "fromNode": "P-1",
+  "toNode": "RW-1",
+  "ttlMinutes": 10
+}
+
+### ========================================
+### SWAGGER UI
+### ========================================
+### Открыть Swagger UI в браузере:
+### http://localhost:8012/swagger

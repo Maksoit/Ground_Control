@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Airport Simulation — Ground Control API
+  description: >
+    Ground — маршруты и занятость рёбер. Reserve выдаётся на весь маршрут.
+    Идемпотентность reserve по reservationId (== routeId).
+  version: "1.0.0"
+  contact:
+    name: Ворогушин
+    
+servers:
+  - url: http://ground:8000
+  - url: http://localhost:8012
+  - url: http://localhost:8080/api/ground
+
+tags:
+  - name: Health
+  - name: Graph
+  - name: Routes
+  - name: Occupancy
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    VehicleType:
+      type: string
+      enum: [plane, bus]
+
+    RouteStatus:
+      type: string
+      enum: [allocated, finished, rejected]
+
+    Node:
+      type: object
+      required: [nodeId, x, y]
+      properties:
+        nodeId: { type: string }
+        x: { type: number }
+        y: { type: number }
+        nodeType: { type: string, nullable: true }
+
+    Edge:
+      type: object
+      required: [edgeId, fromNode, toNode, length]
+      properties:
+        edgeId: { type: string }
+        fromNode: { type: string }
+        toNode: { type: string }
+        length: { type: number }
+
+    EdgePathItem:
+      type: object
+      required: [edgeId, fromNode, toNode]
+      properties:
+        edgeId: { type: string }
+        fromNode: { type: string }
+        toNode: { type: string }
+
+    Route:
+      type: object
+      required: [routeId, vehicleId, vehicleType, fromNode, toNode, edgesPath, status, createdAt, updatedAt]
+      properties:
+        routeId: { type: string, format: uuid }
+        vehicleId: { type: string }
+        vehicleType: { $ref: "#/components/schemas/VehicleType" }
+        fromNode: { type: string }
+        toNode: { type: string }
+        edgesPath:
+          type: array
+          items: { $ref: "#/components/schemas/EdgePathItem" }
+        status: { $ref: "#/components/schemas/RouteStatus" }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ReserveRouteRequest:
+      type: object
+      required: [reservationId, vehicleId, vehicleType, fromNode, toNode, ttlMinutes]
+      properties:
+        reservationId: { type: string, format: uuid }
+        vehicleId: { type: string }
+        vehicleType: { $ref: "#/components/schemas/VehicleType" }
+        fromNode: { type: string }
+        toNode: { type: string }
+        ttlMinutes: { type: integer, minimum: 1 }
+
+    ReleaseResponse:
+      type: object
+      required: [released]
+      properties:
+        released: { type: boolean }
+
+    OccupancyItem:
+      type: object
+      required: [edgeId, occupiedBy, updatedAt]
+      properties:
+        edgeId: { type: string }
+        occupiedBy: { type: string }
+        routeId: { type: string, format: uuid, nullable: true }
+        updatedAt: { type: string, format: date-time }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { status: "ok" }
+
+  /v1/graph/nodes:
+    get:
+      tags: [Graph]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Node" }
+
+  /v1/graph/edges:
+    get:
+      tags: [Graph]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Edge" }
+
+  /v1/routes:
+    get:
+      tags: [Routes]
+      parameters:
+        - in: query
+          name: vehicleId
+          schema: { type: string }
+        - in: query
+          name: vehicleType
+          schema: { $ref: "#/components/schemas/VehicleType" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Route" }
+
+  /v1/routes/reserve:
+    post:
+      tags: [Routes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReserveRouteRequest" }
+      responses:
+        "201":
+          description: Reserved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Route" }
+        "200":
+          description: Idempotent повтор
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Route" }
+        "409":
+          description: route_conflict
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { code: "route_conflict", message: "Some edges are occupied" }
+
+  /v1/routes/{routeId}/release:
+    post:
+      tags: [Routes]
+      parameters:
+        - in: path
+          name: routeId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReleaseResponse" }
+
+  /v1/occupancy:
+    get:
+      tags: [Occupancy]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OccupancyItem" }
