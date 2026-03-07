@@ -1,0 +1,58 @@
+services:
+  ground_db_test:
+    image: postgres:16
+    container_name: ground_db_test
+    environment:
+      POSTGRES_DB: ground_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  kafka_test:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_test
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka_test:29093,PLAINTEXT_HOST://localhost:9093'
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka_test:29092'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka_test:29093,CONTROLLER://kafka_test:29092,PLAINTEXT_HOST://0.0.0.0:9093'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9093" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ground_test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ground_test
+    ports:
+      - "8013:8000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=ground_db_test;Port=5432;Database=ground_test;Username=postgres;Password=postgres
+      - Kafka__Enabled=true
+      - Kafka__BootstrapServers=kafka_test:29093
+      - Kafka__GroupId=ground-service-test
+    depends_on:
+      ground_db_test:
+        condition: service_healthy
+      kafka_test:
+        condition: service_healthy
+    restart: on-failure

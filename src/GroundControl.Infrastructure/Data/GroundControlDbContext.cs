@@ -41,7 +41,7 @@ public class GroundControlDbContext : DbContext
             entity.Property(e => e.FromNode).HasColumnName("from_node");
             entity.Property(e => e.ToNode).HasColumnName("to_node");
             entity.Property(e => e.Length).HasColumnName("length").HasColumnType("numeric").HasDefaultValue(1);
-            
+
             entity.HasIndex(e => e.FromNode).HasDatabaseName("edges_from_idx");
             entity.HasIndex(e => e.ToNode).HasDatabaseName("edges_to_idx");
         });
@@ -73,10 +73,10 @@ public class GroundControlDbContext : DbContext
                     v => Enum.Parse<RouteStatus>(v, true));
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
-            
+            entity.Property(e => e.TtlRemainingMinutes).HasColumnName("ttl_remaining_minutes");
+
             entity.Ignore(e => e.ExpiresAt);
-            entity.Ignore(e => e.TtlRemainingMinutes);
-            
+
             entity.HasIndex(e => e.VehicleId).HasDatabaseName("routes_vehicle_idx");
         });
 

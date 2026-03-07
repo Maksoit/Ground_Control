@@ -1,4 +1,4 @@
-.PHONY: help dev test test-all prod stop clean restore logs db-logs
+.PHONY: help dev test test-unit test-int test-watch test-e2e prod stop clean restore logs db-logs
 
 help:
 	@echo "Ground Control - Makefile Commands"
@@ -10,6 +10,7 @@ help:
 	@echo "  make test       - Run all tests (unit + integration)"
 	@echo "  make test-unit  - Run only unit tests"
 	@echo "  make test-int   - Run only integration tests"
+	@echo "  make test-e2e   - Run E2E tests with real Kafka"
 	@echo ""
 	@echo "PRODUCTION:"
 	@echo "  make prod       - Start production environment (Full Docker stack)"
@@ -37,7 +38,7 @@ dev:
 	@echo ""
 	@echo "Press Ctrl+C to stop API, then 'make stop' to stop database"
 	@echo ""
-	cd src/GroundControl.Api && dotnet watch run
+	cd src/GroundControl.Api && ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:8000 dotnet watch run
 
 # ============================================================
 # TESTING
@@ -57,6 +58,17 @@ test-int:
 test-watch:
 	@echo "Running tests in watch mode..."
 	dotnet watch test
+test-e2e:
+	@echo "Running E2E tests with real Kafka..."
+	@echo "This will start Kafka, PostgreSQL, and Ground Control in Docker"
+	@echo ""
+	@bash tests/e2e_kafka_test.sh
+
+test-e2e:
+	@echo "Running E2E tests with real Kafka..."
+	@echo "This will start Kafka, PostgreSQL, and Ground Control in Docker"
+	@echo ""
+	@bash tests/e2e_kafka_test.sh
 
 # ============================================================
 # PRODUCTION MODE

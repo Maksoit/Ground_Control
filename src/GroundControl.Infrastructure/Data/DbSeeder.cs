@@ -18,8 +18,25 @@ public class DbSeeder
     {
         try
         {
+            // Проверяем, существует ли таблица nodes
+            var tableExists = await _context.Database.CanConnectAsync();
+            if (!tableExists)
+            {
+                _logger.LogWarning("Database not ready, skipping seed");
+                return;
+            }
+
             // Проверяем, есть ли уже данные
-            var nodesCount = await _context.Nodes.CountAsync();
+            var nodesCount = 0;
+            try
+            {
+                nodesCount = await _context.Nodes.CountAsync();
+            }
+            catch
+            {
+                // Таблица ещё не создана, продолжаем
+            }
+
             if (nodesCount > 0)
             {
                 _logger.LogInformation("Database already seeded, skipping seed");

@@ -173,12 +173,16 @@ public class RouteService : IRouteService
         foreach (var route in allocatedRoutes)
         {
             route.TtlRemainingMinutes -= tickMinutes;
+            route.UpdatedAt = DateTime.UtcNow;
 
             if (route.TtlRemainingMinutes <= 0)
             {
                 _logger.LogWarning("Route {RouteId} expired (TTL exhausted)", route.RouteId);
                 expiredRoutes.Add(route);
             }
+
+            // Mark route as modified so EF Core tracks the changes
+            _context.Routes.Update(route);
         }
 
         // Release expired routes
